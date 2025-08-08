@@ -1,4 +1,4 @@
-name: Build PS3 Plugin
+name: Build Guitar Remap Plugin
 
 # Trigger on push or manual dispatch
 on:
