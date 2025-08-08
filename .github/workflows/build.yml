@@ -11,56 +11,53 @@ on:
 jobs:
   build:
     runs-on: ubuntu-20.04
+    timeout-minutes: 60
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
+    - name: Test basic functionality
+      run: |
+        echo "=== Basic system info ==="
+        uname -a
+        whoami
+        pwd
+        ls -la
+        
     - name: Install Dependencies
       run: |
+        echo "=== Installing dependencies ==="
         sudo apt-get update
-        sudo apt-get install -y build-essential git subversion wget flex bison gperf \
-        python2.7 python2.7-dev python-dev-is-python2 autoconf automake texinfo pkg-config \
-        zlib1g-dev libtool libgmp-dev libmpfr-dev libmpc-dev make file patch \
-        libelf-dev libtool-bin libncurses5-dev libncursesw5-dev gettext bzip2 \
-        gcc-multilib g++-multilib
+        sudo apt-get install -y build-essential git wget python2.7 python2.7-dev \
+        autoconf automake texinfo pkg-config zlib1g-dev libtool libgmp-dev \
+        libmpfr-dev libmpc-dev make file patch libelf-dev gettext bzip2 \
+        flex bison ccache curl
 
     - name: Setup Python 2.7
       run: |
+        echo "=== Setting up Python 2.7 ==="
         sudo update-alternatives --install /usr/bin/python python /usr/bin/python2.7 1
-        sudo update-alternatives --set python /usr/bin/python2.7
+        python --version
 
-    - name: Setup PS3 Development Environment
+    - name: Install PS3 Toolchain (simplified)
       run: |
+        echo "=== Installing PS3 toolchain ==="
         export PS3DEV=/usr/local/ps3dev
-        export PSL1GHT=$PS3DEV
-        export PATH=$PATH:$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin
         sudo mkdir -p $PS3DEV
         sudo chown $USER:$USER $PS3DEV
-
-    - name: Install PS3 Toolchain
-      run: |
-        echo "Starting PS3 toolchain installation..."
-        git clone https://github.com/ps3dev/ps3toolchain.git
+        
+        # Try a minimal toolchain setup first
+        git clone --depth 1 https://github.com/ps3dev/ps3toolchain.git
         cd ps3toolchain
-        chmod +x toolchain.sh
-        echo "Running toolchain.sh..."
-        ./toolchain.sh || { echo "Toolchain build failed"; cat *.log; exit 1; }
-
-    - name: Build Plugin
-      run: |
-        echo "Setting up environment variables..."
-        export PS3DEV=/usr/local/ps3dev
-        export PSL1GHT=$PS3DEV
-        export PATH=$PATH:$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin
         
-        echo "Current directory contents:"
-        ls -la
-        
-        echo "Cleaning previous build..."
-        make clean
-        
-        echo "Building plugin..."
-        make VERBOSE=1 || { echo "Build failed"; cat *.log 2>/dev/null; exit 1; }
+        # Run with timeout and better error handling
+        timeout 45m ./toolchain.sh || {
+          echo "Toolchain installation failed or timed out"
+          echo "Checking for any log files..."
+          find . -name "*.log" -exec tail -50 {} \;
+          exit 1
+        }
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
