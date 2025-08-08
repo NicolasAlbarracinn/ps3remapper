@@ -39,17 +39,28 @@ jobs:
 
     - name: Install PS3 Toolchain
       run: |
+        echo "Starting PS3 toolchain installation..."
         git clone https://github.com/ps3dev/ps3toolchain.git
         cd ps3toolchain
-        ./toolchain.sh
+        chmod +x toolchain.sh
+        echo "Running toolchain.sh..."
+        ./toolchain.sh || { echo "Toolchain build failed"; cat *.log; exit 1; }
 
     - name: Build Plugin
       run: |
+        echo "Setting up environment variables..."
         export PS3DEV=/usr/local/ps3dev
         export PSL1GHT=$PS3DEV
         export PATH=$PATH:$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin
+        
+        echo "Current directory contents:"
+        ls -la
+        
+        echo "Cleaning previous build..."
         make clean
-        make
+        
+        echo "Building plugin..."
+        make VERBOSE=1 || { echo "Build failed"; cat *.log 2>/dev/null; exit 1; }
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
