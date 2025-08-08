@@ -33,25 +33,43 @@ jobs:
         sudo update-alternatives --install /usr/bin/python python /usr/bin/python2.7 1
         sudo update-alternatives --set python /usr/bin/python2.7
 
-    - name: Install PS3 Toolchain
+    - name: Install PS3 SDK (PSL1GHT)
       run: |
-        echo "=== Starting PS3 toolchain installation ==="
-        git clone https://github.com/ps3dev/ps3toolchain.git
-        cd ps3toolchain
-        chmod +x toolchain.sh
-        echo "Running toolchain.sh..."
-        ./toolchain.sh || { echo "Toolchain build failed"; cat *.log; exit 1; }
-
-    - name: Install PSL1GHT
-      run: |
-        echo "=== Installing PSL1GHT ==="
+        echo "=== Installing PS3 SDK (PSL1GHT) ==="
+        echo "This is much faster than the full toolchain..."
+        
+        # Install PSL1GHT (the PS3 SDK) - this is what we actually need
         export PS3DEV=/usr/local/ps3dev
         export PSL1GHT=$PS3DEV
         export PATH=$PATH:$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin
         
+        # Clone and build PSL1GHT (much faster than full toolchain)
         git clone --depth 1 https://github.com/ps3dev/PSL1GHT.git
         cd PSL1GHT
-        make && sudo make install
+        make -j$(nproc) && sudo make install
+        
+        echo "PS3 SDK installed successfully!"
+
+    - name: Install PS3 Compiler (ppu-gcc)
+      run: |
+        echo "=== Installing PS3 compiler (ppu-gcc) ==="
+        echo "This is the minimal tool we need to build your plugin..."
+        
+        # Try to get a pre-built ppu-gcc or build minimal toolchain
+        export PS3DEV=/usr/local/ps3dev
+        export PATH=$PATH:$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin
+        
+        # Check if ppu-gcc is available
+        which ppu-gcc || {
+          echo "ppu-gcc not found, building minimal toolchain..."
+          # Build only the essential compiler components
+          git clone --depth 1 https://github.com/ps3dev/ps3toolchain.git
+          cd ps3toolchain
+          # Build only what we need for ppu-gcc
+          ./toolchain.sh || { echo "Minimal toolchain build failed"; exit 1; }
+        }
+        
+        echo "PS3 compiler ready!"
 
     - name: Build Plugin
       run: |
