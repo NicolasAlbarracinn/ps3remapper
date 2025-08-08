@@ -59,6 +59,39 @@ jobs:
           exit 1
         }
 
+    - name: Install PSL1GHT
+      run: |
+        echo "=== Installing PSL1GHT ==="
+        export PS3DEV=/usr/local/ps3dev
+        export PSL1GHT=$PS3DEV
+        export PATH=$PATH:$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin
+        
+        git clone --depth 1 https://github.com/ps3dev/PSL1GHT.git
+        cd PSL1GHT
+        make && sudo make install
+
+    - name: Build Plugin
+      run: |
+        echo "=== Building the plugin ==="
+        export PS3DEV=/usr/local/ps3dev
+        export PSL1GHT=$PS3DEV
+        export PATH=$PATH:$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin
+        
+        echo "Environment setup:"
+        echo "PS3DEV=$PS3DEV"
+        echo "PSL1GHT=$PSL1GHT"
+        echo "PATH=$PATH"
+        
+        echo "Checking toolchain installation:"
+        ls -la $PS3DEV/ || echo "PS3DEV directory not found"
+        
+        echo "Building plugin..."
+        make clean || echo "Clean failed"
+        make || echo "Build failed"
+        
+        echo "Checking build results:"
+        ls -la *.sprx || echo "No .sprx files found"
+
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
