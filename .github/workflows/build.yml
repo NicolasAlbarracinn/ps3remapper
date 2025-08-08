@@ -1,5 +1,6 @@
 name: Build PS3 Plugin
 
+# Trigger on push or manual dispatch
 on:
   push:
     branches: [ master ]
