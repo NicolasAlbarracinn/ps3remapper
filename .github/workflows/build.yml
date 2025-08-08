@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     
     steps:
     - uses: actions/checkout@v4
@@ -19,7 +19,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential git subversion wget flex bison gperf \
-        python2.7 python2.7-dev python-dev autoconf automake texinfo pkg-config \
+        python2.7 python2.7-dev python-dev-is-python2 autoconf automake texinfo pkg-config \
         zlib1g-dev libtool libgmp-dev libmpfr-dev libmpc-dev make file patch \
         libelf-dev libtool-bin libncurses5-dev libncursesw5-dev gettext bzip2 \
         gcc-multilib g++-multilib
