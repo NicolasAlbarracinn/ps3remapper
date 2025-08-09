@@ -6,22 +6,28 @@ PS3DEV = $(PS3SDK)
 PSL1GHT = $(PS3SDK)
 
 # Compiler and flags
-CC = ppu-gcc
-CFLAGS = -Wall -O2 -std=c99 -DPS3
-LDFLAGS = -L$(PSL1GHT)/lib -lpsl1ght -lsysmodule -lpad -lnet
+CC = powerpc64-ps3-elf-gcc
+CFLAGS = -Wall -O2 -std=gnu99 -DPS3 \
+    -I$(PSL1GHT)/ppu/include
+LDFLAGS = -L$(PSL1GHT)/ppu/lib -lsysmodule -lio -lnet -llv2
 
 # Source files
 SOURCES = src/guitar_remap.c src/web_interface.c
 OBJECTS = $(SOURCES:.c=.o)
+TARGET_ELF = guitar_remap.elf
 TARGET = guitar_remap.sprx
 
 # Default target
 all: $(TARGET)
 
 # Build the plugin
-$(TARGET): $(OBJECTS)
-	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
+$(TARGET): $(TARGET_ELF)
+	sprxlinker $(TARGET_ELF) $(TARGET)
 	@echo "Plugin built successfully: $(TARGET)"
+
+$(TARGET_ELF): $(OBJECTS)
+	$(CC) $(OBJECTS) -o $@ $(LDFLAGS) -nostartfiles \
+	  /usr/local/ps3dev/ppu/powerpc64-ps3-elf/lib/lv2-sprx.o
 
 # Compile source files
 %.o: %.c
@@ -29,7 +35,7 @@ $(TARGET): $(OBJECTS)
 
 # Clean build files
 clean:
-	rm -f $(OBJECTS) $(TARGET)
+	rm -f $(OBJECTS) $(TARGET_ELF) $(TARGET)
 	@echo "Build files cleaned"
 
 # Install plugin to PS3 (requires network access)

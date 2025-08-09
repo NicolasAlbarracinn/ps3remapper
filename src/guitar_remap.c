@@ -7,18 +7,17 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <pthread.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-// PS3 SDK includes
-#include <cell/pad.h>
-#include <cell/sysmodule.h>
+// PS3 SDK (PSL1GHT) includes
+#include <io/pad.h>
+#include <sysmodule/sysmodule.h>
 #include <sys/prx.h>
-#include <sys/ppu_thread.h>
-#include <sys/timer.h>
-#include <sys/syscall.h>
+#include <ppu-types.h>
+#include <sys/thread.h>
+#include <sys/systime.h>
 
 // Include web interface functions
 extern int start_web_interface(void);
@@ -28,7 +27,7 @@ extern void stop_web_interface(void);
 button_mapping_t button_mappings[MAX_BUTTONS];
 int mapping_count = 0;
 int plugin_running = 0;
-pthread_t remap_thread;
+sys_ppu_thread_t remap_thread;
 interface_state_t interface_state;
 
 // Load configuration from file
@@ -286,7 +285,7 @@ void handle_interface_input(void) {
 }
 
 // Interface thread
-void *interface_thread(void *arg) {
+void interface_thread(void *arg) {
     while (interface_state.interface_active) {
         update_controller_info();
         draw_interface();
@@ -296,11 +295,11 @@ void *interface_thread(void *arg) {
         sys_timer_usleep(1000000 / INTERFACE_UPDATE_RATE); // Convert Hz to microseconds
     }
     
-    return NULL;
+    return;
 }
 
 // Main remapping thread
-void *remap_controller_thread(void *arg) {
+void remap_controller_thread(void *arg) {
     CellPadData pad_data;
     uint32_t original_buttons, remapped_buttons;
     
@@ -324,7 +323,7 @@ void *remap_controller_thread(void *arg) {
         sys_timer_usleep(1000); // 1ms
     }
     
-    return NULL;
+    return;
 }
 
 // Apply button remapping
@@ -338,13 +337,10 @@ void remap_buttons(uint32_t *input, uint32_t *output) {
     }
 }
 
-// Plugin entry point
-SYS_MODULE_INFO(PLUGIN_NAME, 0, 1, 1);
-SYS_MODULE_START(module_start);
-SYS_MODULE_STOP(module_stop);
+// Plugin entry point (PSL1GHT build does not require SYS_MODULE_* macros)
 
 // Module start function
-int module_start(SYS_MODULE_START_ARGUMENT *arg) {
+int module_start(void *arg) {
     // Initialize PS3 SDK
     cellSysmoduleLoadModule(CELL_SYSMODULE_PAD);
     
@@ -366,7 +362,7 @@ int module_start(SYS_MODULE_START_ARGUMENT *arg) {
     }
     
     // Start interface thread
-    if (sys_ppu_thread_create(&interface_state.interface_thread, interface_thread, 0,
+    if (sys_ppu_thread_create(&interface_state.interface_thread_id, interface_thread, 0,
                              THREAD_PRIO, THREAD_STACK_SIZE,
                              SYS_PPU_THREAD_CREATE_JOINABLE, "interface_thread") != 0) {
         return SYS_PRX_RESIDENT;
@@ -383,7 +379,7 @@ int module_start(SYS_MODULE_START_ARGUMENT *arg) {
 }
 
 // Module stop function
-int module_stop(SYS_MODULE_STOP_ARGUMENT *arg) {
+int module_stop(void *arg) {
     plugin_running = 0;
     interface_state.interface_active = 0;
     
@@ -395,8 +391,8 @@ int module_stop(SYS_MODULE_STOP_ARGUMENT *arg) {
         sys_ppu_thread_join(remap_thread, NULL);
     }
     
-    if (interface_state.interface_thread) {
-        sys_ppu_thread_join(interface_state.interface_thread, NULL);
+    if (interface_state.interface_thread_id) {
+        sys_ppu_thread_join(interface_state.interface_thread_id, NULL);
     }
     
     return SYS_PRX_RESIDENT;

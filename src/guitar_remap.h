@@ -2,7 +2,40 @@
 #define GUITAR_REMAP_H
 
 #include <stdint.h>
+#include <ppu-types.h>
 #include <sys/prx.h>
+#include <sys/thread.h>
+#include <io/pad.h>
+#include <sysmodule/sysmodule.h>
+
+// PSL1GHT compatibility aliases for Sony SDK names used in code
+typedef padData CellPadData;
+#ifndef CELL_PAD_OK
+#define CELL_PAD_OK 0
+#endif
+#ifndef cellPadGetData
+#define cellPadGetData ioPadGetData
+#endif
+#ifndef CELL_SYSMODULE_PAD
+#define CELL_SYSMODULE_PAD SYSMODULE_IO
+#endif
+#ifndef cellSysmoduleLoadModule
+#define cellSysmoduleLoadModule sysModuleLoad
+#endif
+#ifndef SYS_PPU_THREAD_CREATE_JOINABLE
+#define SYS_PPU_THREAD_CREATE_JOINABLE THREAD_JOINABLE
+#endif
+#ifndef sys_ppu_thread_create
+#define sys_ppu_thread_create sysThreadCreate
+#endif
+#ifndef sys_ppu_thread_join
+#define sys_ppu_thread_join sysThreadJoin
+#endif
+#ifndef sys_timer_usleep
+#define sys_timer_usleep sysUsleep
+#endif
+
+/* use PSL1GHT's real SYS_MODULE_* macros from <sys/prx.h> */
 
 // Plugin information
 #define PLUGIN_NAME "GuitarControllerRemap"
@@ -73,7 +106,7 @@ typedef struct {
     int selected_controller;
     controller_info_t controllers[MAX_CONTROLLERS];
     int controller_count;
-    pthread_t interface_thread;
+    sys_ppu_thread_t interface_thread_id;
 } interface_state_t;
 
 // Function prototypes
@@ -81,12 +114,12 @@ int load_config(void);
 int parse_button_name(const char *name);
 int parse_ps3_button(const char *name);
 void create_default_config(void);
-void *remap_controller_thread(void *arg);
+void remap_controller_thread(void *arg);
 void remap_buttons(uint32_t *input, uint32_t *output);
 int detect_guitar_controller(void);
 
 // Interface functions
-void *interface_thread(void *arg);
+void interface_thread(void *arg);
 void update_controller_info(void);
 void draw_interface(void);
 void handle_interface_input(void);
@@ -97,15 +130,13 @@ void add_button_to_history(int controller_port, uint32_t button_code);
 // Web interface functions
 int start_web_interface(void);
 void stop_web_interface(void);
-void *web_server_thread(void *arg);
-void handle_web_client(void *client);
 void generate_html_page(char *buffer, size_t buffer_size);
 
 // Global variables (extern declarations)
 extern button_mapping_t button_mappings[MAX_BUTTONS];
 extern int mapping_count;
 extern int plugin_running;
-extern pthread_t remap_thread;
+extern sys_ppu_thread_t remap_thread;
 extern interface_state_t interface_state;
 
 #endif // GUITAR_REMAP_H 

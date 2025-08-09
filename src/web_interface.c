@@ -7,7 +7,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <pthread.h>
+#include <sys/thread.h>
+#include <ppu-types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -26,7 +27,7 @@ typedef struct {
 
 web_client_t web_clients[MAX_CLIENTS];
 int web_server_socket = -1;
-pthread_t web_server_thread;
+sys_ppu_thread_t web_server_thread_id;
 int web_server_running = 0;
 
 // Generate HTML page with controller information (webMAN MOD style)
@@ -245,7 +246,7 @@ void generate_html_page(char *buffer, size_t buffer_size) {
 }
 
 // Handle web client connection
-void handle_web_client(web_client_t *client) {
+static void handle_web_client(web_client_t *client) {
     char buffer[BUFFER_SIZE];
     char response[BUFFER_SIZE * 2];
     
@@ -274,7 +275,7 @@ void handle_web_client(web_client_t *client) {
 }
 
 // Web server thread (integrated with webMAN MOD)
-void *web_server_thread(void *arg) {
+void web_server_main(void *arg) {
     struct sockaddr_in server_addr;
     int opt = 1;
     
@@ -282,7 +283,7 @@ void *web_server_thread(void *arg) {
     web_server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (web_server_socket < 0) {
         printf("Failed to create web server socket\n");
-        return NULL;
+        return;
     }
     
     // Set socket options
@@ -306,7 +307,7 @@ void *web_server_thread(void *arg) {
         if (bind(web_server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
             close(web_server_socket);
             printf("Failed to bind to port 8080 as well\n");
-            return NULL;
+            return;
         }
         
         printf("Web interface started on port 8080 (standalone mode)\n");
@@ -319,7 +320,7 @@ void *web_server_thread(void *arg) {
     // Listen for connections
     if (listen(web_server_socket, MAX_CLIENTS) < 0) {
         close(web_server_socket);
-        return NULL;
+        return;
     }
     
     while (web_server_running) {
@@ -354,7 +355,7 @@ void *web_server_thread(void *arg) {
     }
     
     close(web_server_socket);
-    return NULL;
+    return;
 }
 
 // Start web interface
@@ -365,7 +366,7 @@ int start_web_interface(void) {
     memset(web_clients, 0, sizeof(web_clients));
     
     // Start web server thread
-    if (sys_ppu_thread_create(&web_server_thread, web_server_thread, 0,
+    if (sys_ppu_thread_create(&web_server_thread_id, web_server_main, 0,
                              THREAD_PRIO, THREAD_STACK_SIZE,
                              SYS_PPU_THREAD_CREATE_JOINABLE, "web_server") != 0) {
         return -1;
@@ -387,7 +388,7 @@ void stop_web_interface(void) {
     }
     
     // Wait for web server thread to finish
-    if (web_server_thread) {
-        sys_ppu_thread_join(web_server_thread, NULL);
+    if (web_server_thread_id) {
+        sys_ppu_thread_join(web_server_thread_id, NULL);
     }
 } 

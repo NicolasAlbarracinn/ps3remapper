@@ -22,10 +22,16 @@ A PlayStation 3 HEN (Homebrew ENabler) plugin that allows you to remap buttons o
 
 ## Installation
 
-1. Copy the `guitar_remap.sprx` file to your PS3's `/dev_hdd0/plugins/` directory
-2. Create a configuration file `guitar_remap.conf` in the same directory
-3. Restart your PS3 or reload HEN
-4. The plugin will automatically detect and remap your guitar controller
+1. Copy files to your PS3 (FTP or file manager):
+   - `guitar_remap.sprx` → `/dev_hdd0/plugins/`
+   - `guitar_remap.conf` → `/dev_hdd0/plugins/`
+
+2. Enable the plugin (pick one):
+   - webMAN MOD: open `http://your-ps3-ip/setup.ps3` → Plugin Setup → add `/dev_hdd0/plugins/guitar_remap.sprx` → Save → Reboot
+   - boot_plugins.txt: edit `/dev_hdd0/boot_plugins.txt` and add a line:
+     - `/dev_hdd0/plugins/guitar_remap.sprx` → Reboot
+
+3. After reboot, the plugin loads and starts remapping per your config.
 
 ## Using the Interface
 
@@ -64,6 +70,10 @@ The plugin automatically starts a console interface that shows:
 - Press any button to see input detection
 - Press START to exit interface
 - Press SELECT to refresh
+
+### Uninstall / Disable
+- webMAN MOD: remove the line from Plugin Setup → Save → Reboot
+- boot_plugins.txt: remove the line from `/dev_hdd0/boot_plugins.txt` → Reboot
 
 ## Configuration
 
@@ -151,19 +161,28 @@ DPAD_RIGHT=DPAD_RIGHT
 - **Refresh interface** - Use the "🔄 Refresh" button
 - **Auto-refresh** - Interface updates every 3 seconds
 
-## Development
+## Development / Build
 
-This plugin is written in C and uses the PS3 SDK. To compile:
+Fastest path (Docker, Windows):
+
+1) Install Docker Desktop and share the `D:` drive
+2) Build using the local SDK image (created once in this repo history):
 
 ```bash
-make clean
-make
+docker run --rm -v "D:/src/pluginps3:/src" ps3sdk-local bash -lc "pacman -S --noconfirm make || true; cd /src && make clean && make -j1"
 ```
 
-### Build Options
-- `make debug` - Build with debug information
-- `make web` - Build with web interface enabled
-- `make help` - Show all available build options
+Artifacts: `guitar_remap.sprx` will appear in the project root.
+
+If you don't have `ps3sdk-local`:
+
+```bash
+docker build -t ps3sdk-local ./ps3sdk-docker
+```
+
+Common targets:
+- `make` - Build release
+- `make clean` - Clean artifacts
 
 ## License
 
