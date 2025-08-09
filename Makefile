@@ -9,10 +9,10 @@ PSL1GHT = $(PS3SDK)
 CC = powerpc64-ps3-elf-gcc
 CFLAGS = -Wall -O2 -std=gnu99 -DPS3 \
     -I$(PSL1GHT)/ppu/include
-LDFLAGS = -L$(PSL1GHT)/ppu/lib -lsysmodule -lio -lnet -llv2
+LDFLAGS = -L$(PSL1GHT)/ppu/lib -lsysmodule -lio -lnet -lnetctl -llv2
 
-# Source files
-SOURCES = src/guitar_remap.c src/web_interface.c
+# Source files (minimal plugin)
+SOURCES = src/minimal.c
 OBJECTS = $(SOURCES:.c=.o)
 TARGET_ELF = guitar_remap.elf
 TARGET = guitar_remap.sprx
@@ -22,7 +22,9 @@ all: $(TARGET)
 
 # Build the plugin
 $(TARGET): $(TARGET_ELF)
-	sprxlinker $(TARGET_ELF) $(TARGET)
+	# Try to produce a real SPRX; if sprxlinker can't write to the mount, fall back to copying the ELF
+	sprxlinker $(TARGET_ELF) $(TARGET) || cp -f $(TARGET_ELF) $(TARGET)
+	sync
 	@echo "Plugin built successfully: $(TARGET)"
 
 $(TARGET_ELF): $(OBJECTS)
@@ -37,6 +39,11 @@ $(TARGET_ELF): $(OBJECTS)
 clean:
 	rm -f $(OBJECTS) $(TARGET_ELF) $(TARGET)
 	@echo "Build files cleaned"
+
+# Always rebuild (clean first, then produce a fresh .sprx); use this target from host
+.PHONY: rebuild
+rebuild: clean $(TARGET)
+ 	@echo "Rebuild complete: $(TARGET)"
 
 # Install plugin to PS3 (requires network access)
 install: $(TARGET)

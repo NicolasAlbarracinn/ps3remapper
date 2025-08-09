@@ -1,3 +1,231 @@
+#include <ppu-types.h>
+#include <sys/prx.h>
+#include <sys/thread.h>
+#include <sysmodule/sysmodule.h>
+#include <net/net.h>
+#include <net/netctl.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+
+// Minimal test plugin: serves a simple page on http://<ps3-ip>:8080/
+
+static volatile int plugin_running = 0;
+static sys_ppu_thread_t http_thread_id;
+
+static void http_thread(void *arg) {
+    int server = socket(AF_INET, SOCK_STREAM, 0);
+    if (server < 0) return;
+
+    int yes = 1;
+    setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+
+    struct sockaddr_in addr; memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(8080);
+    if (bind(server, (struct sockaddr *)&addr, sizeof(addr)) < 0) { close(server); return; }
+    if (listen(server, 4) < 0) { close(server); return; }
+
+    while (plugin_running) {
+        struct sockaddr_in caddr; socklen_t clen = sizeof(caddr);
+        int client = accept(server, (struct sockaddr *)&caddr, &clen);
+        if (client < 0) continue;
+
+        const char *body = "<html><body><h1>Guitar Remap Test</h1><p>Plugin is running.</p></body></html>";
+        char header[256];
+        int blen = (int)strlen(body);
+        int hlen = snprintf(header, sizeof(header),
+                            "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: %d\r\nConnection: close\r\n\r\n",
+                            blen);
+        if (hlen > 0) send(client, header, (size_t)hlen, 0);
+        send(client, body, (size_t)blen, 0);
+        close(client);
+    }
+
+    close(server);
+}
+
+int module_start(void *arg) {
+    // Initialize networking
+    sysModuleLoad(SYSMODULE_NET);
+    sysModuleLoad(SYSMODULE_NETCTL);
+    netInitialize();
+    netCtlInit();
+
+    // Start HTTP thread
+    plugin_running = 1;
+    if (sysThreadCreate(&http_thread_id, http_thread, 0, 1000, 0x4000, THREAD_JOINABLE, "http_thread") != 0) {
+        plugin_running = 0;
+    }
+    return SYS_PRX_RESIDENT;
+}
+
+int module_stop(void *arg) {
+    plugin_running = 0;
+    if (http_thread_id) {
+        sysThreadJoin(http_thread_id, NULL);
+    }
+    netCtlTerm();
+    netDeinitialize();
+    return SYS_PRX_RESIDENT;
+}
+
+#include <ppu-types.h>
+#include <sys/prx.h>
+#include <sys/thread.h>
+#include <sysmodule/sysmodule.h>
+#include <net/net.h>
+#include <net/netctl.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+
+// Minimal test plugin: serves a simple page on http://<ps3-ip>:8080/
+
+static volatile int plugin_running = 0;
+static sys_ppu_thread_t http_thread_id;
+
+static void http_thread(void *arg) {
+    int server = socket(AF_INET, SOCK_STREAM, 0);
+    if (server < 0) return;
+
+    int yes = 1;
+    setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+
+    struct sockaddr_in addr; memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(8080);
+    if (bind(server, (struct sockaddr *)&addr, sizeof(addr)) < 0) { close(server); return; }
+    if (listen(server, 4) < 0) { close(server); return; }
+
+    while (plugin_running) {
+        struct sockaddr_in caddr; socklen_t clen = sizeof(caddr);
+        int client = accept(server, (struct sockaddr *)&caddr, &clen);
+        if (client < 0) continue;
+
+        const char *body = "<html><body><h1>Guitar Remap Test</h1><p>Plugin is running.</p></body></html>";
+        char header[256];
+        int blen = (int)strlen(body);
+        int hlen = snprintf(header, sizeof(header),
+                            "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: %d\r\nConnection: close\r\n\r\n",
+                            blen);
+        if (hlen > 0) send(client, header, (size_t)hlen, 0);
+        send(client, body, (size_t)blen, 0);
+        close(client);
+    }
+
+    close(server);
+}
+
+int module_start(void *arg) {
+    // Initialize networking
+    sysModuleLoad(SYSMODULE_NET);
+    sysModuleLoad(SYSMODULE_NETCTL);
+    netInitialize();
+    netCtlInit();
+
+    // Start HTTP thread
+    plugin_running = 1;
+    if (sysThreadCreate(&http_thread_id, http_thread, 0, 1000, 0x4000, THREAD_JOINABLE, "http_thread") != 0) {
+        plugin_running = 0;
+    }
+    return SYS_PRX_RESIDENT;
+}
+
+int module_stop(void *arg) {
+    plugin_running = 0;
+    if (http_thread_id) {
+        sysThreadJoin(http_thread_id, NULL);
+    }
+    netCtlTerm();
+    netDeinitialize();
+    return SYS_PRX_RESIDENT;
+}
+
+#include <ppu-types.h>
+#include <sys/prx.h>
+#include <sys/thread.h>
+#include <sysmodule/sysmodule.h>
+#include <net/net.h>
+#include <net/netctl.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+
+// Minimal test plugin: serves a simple page on http://<ps3-ip>:8080/
+
+static volatile int plugin_running = 0;
+static sys_ppu_thread_t http_thread_id;
+
+static void http_thread(void *arg) {
+    int server = socket(AF_INET, SOCK_STREAM, 0);
+    if (server < 0) return;
+
+    int yes = 1;
+    setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+
+    struct sockaddr_in addr; memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(8080);
+    if (bind(server, (struct sockaddr *)&addr, sizeof(addr)) < 0) { close(server); return; }
+    if (listen(server, 4) < 0) { close(server); return; }
+
+    while (plugin_running) {
+        struct sockaddr_in caddr; socklen_t clen = sizeof(caddr);
+        int client = accept(server, (struct sockaddr *)&caddr, &clen);
+        if (client < 0) continue;
+
+        const char *body = "<html><body><h1>Guitar Remap Test</h1><p>Plugin is running.</p></body></html>";
+        char header[256];
+        int blen = (int)strlen(body);
+        int hlen = snprintf(header, sizeof(header),
+                            "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: %d\r\nConnection: close\r\n\r\n",
+                            blen);
+        if (hlen > 0) send(client, header, (size_t)hlen, 0);
+        send(client, body, (size_t)blen, 0);
+        close(client);
+    }
+
+    close(server);
+}
+
+int module_start(void *arg) {
+    // Initialize networking
+    sysModuleLoad(SYSMODULE_NET);
+    sysModuleLoad(SYSMODULE_NETCTL);
+    netInitialize();
+    netCtlInit();
+
+    // Start HTTP thread
+    plugin_running = 1;
+    if (sysThreadCreate(&http_thread_id, http_thread, 0, 1000, 0x4000, THREAD_JOINABLE, "http_thread") != 0) {
+        plugin_running = 0;
+    }
+    return SYS_PRX_RESIDENT;
+}
+
+int module_stop(void *arg) {
+    plugin_running = 0;
+    if (http_thread_id) {
+        sysThreadJoin(http_thread_id, NULL);
+    }
+    netCtlTerm();
+    netDeinitialize();
+    return SYS_PRX_RESIDENT;
+}
+
 #include "guitar_remap.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,6 +238,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <net/net.h>
+#include <net/netctl.h>
 
 // PS3 SDK (PSL1GHT) includes
 #include <io/pad.h>
@@ -343,6 +573,10 @@ void remap_buttons(uint32_t *input, uint32_t *output) {
 int module_start(void *arg) {
     // Initialize PS3 SDK
     cellSysmoduleLoadModule(CELL_SYSMODULE_PAD);
+    sysModuleLoad(SYSMODULE_NET);
+    sysModuleLoad(SYSMODULE_NETCTL);
+    netInitialize();
+    netCtlInit();
     
     // Initialize interface state
     memset(&interface_state, 0, sizeof(interface_state));
@@ -395,5 +629,7 @@ int module_stop(void *arg) {
         sys_ppu_thread_join(interface_state.interface_thread_id, NULL);
     }
     
+    netCtlTerm();
+    netDeinitialize();
     return SYS_PRX_RESIDENT;
 } 

@@ -1,3 +1,4 @@
+// Minimal header placeholder retained for build; not used by the test plugin
 #ifndef GUITAR_REMAP_H
 #define GUITAR_REMAP_H
 
@@ -132,11 +133,6 @@ int start_web_interface(void);
 void stop_web_interface(void);
 void generate_html_page(char *buffer, size_t buffer_size);
 
-// Global variables (extern declarations)
-extern button_mapping_t button_mappings[MAX_BUTTONS];
-extern int mapping_count;
-extern int plugin_running;
-extern sys_ppu_thread_t remap_thread;
-extern interface_state_t interface_state;
+// No externs needed for minimal plugin
 
 #endif // GUITAR_REMAP_H 
