@@ -10,11 +10,14 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <sysutil/sysutil.h>
+#include <sysutil/msg.h>
 
 // Minimal test plugin: serves a simple page on http://<ps3-ip>:8080/
 
 static volatile int plugin_running = 0;
 static sys_ppu_thread_t http_thread_id;
+static sys_ppu_thread_t notify_thread_id;
 
 static void http_thread(void *arg) {
     int server = socket(AF_INET, SOCK_STREAM, 0);
@@ -49,6 +52,34 @@ static void http_thread(void *arg) {
     close(server);
 }
 
+static void sysutil_cb(uint64_t status, uint64_t param, void* userdata) {
+    (void)status; (void)param; (void)userdata;
+}
+
+static void dialog_cb(int button, void *usrdata) {
+    (void)button; (void)usrdata;
+}
+
+static void notify_thread(void *arg) {
+    sysUtilRegisterCallback(SYSUTIL_EVENT_SLOT0, sysutil_cb, NULL);
+
+    cellMsgDialogOpen2(
+        CELL_MSGDIALOG_DIALOG_TYPE_SE_TYPE_NORMAL
+        | CELL_MSGDIALOG_DIALOG_TYPE_BUTTON_TYPE_NONE
+        | CELL_MSGDIALOG_DIALOG_TYPE_DISABLE_CANCEL_ON,
+        "Guitar Remap plugin loaded ✓",
+        dialog_cb, NULL, NULL
+    );
+
+    for (int i = 0; i < 200 && plugin_running; i++) {
+        sysUtilCheckCallback();
+        sysUsleep(10000);
+    }
+
+    cellMsgDialogAbort();
+    sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT0);
+}
+
 int module_start(void *arg) {
     sysModuleLoad(SYSMODULE_NET);
     sysModuleLoad(SYSMODULE_NETCTL);
@@ -56,6 +87,10 @@ int module_start(void *arg) {
     netCtlInit();
 
     plugin_running = 1;
+
+    // Fire-and-forget notification
+    sysThreadCreate(&notify_thread_id, notify_thread, 0, 1000, 0x2000, THREAD_JOINABLE, "notify_thread");
+
     if (sysThreadCreate(&http_thread_id, http_thread, 0, 1000, 0x4000, THREAD_JOINABLE, "http_thread") != 0) {
         plugin_running = 0;
     }
@@ -66,6 +101,9 @@ int module_stop(void *arg) {
     plugin_running = 0;
     if (http_thread_id) {
         sysThreadJoin(http_thread_id, NULL);
+    }
+    if (notify_thread_id) {
+        sysThreadJoin(notify_thread_id, NULL);
     }
     netCtlTerm();
     netDeinitialize();
