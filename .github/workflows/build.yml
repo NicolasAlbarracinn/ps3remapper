@@ -1,51 +1,26 @@
-name: Build PS3 HEN plugin
-
+name: Build PS3 plugin
 on:
   workflow_dispatch:
-  push:
-    branches: [ main, master ]
+  push: { branches: [main, master] }
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # Cache Docker layers so it only builds the toolchain once in CI
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-ps3sdk-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-ps3sdk-
-
-      - name: Build ps3 SDK image (inside CI, not your PC)
+      - name: Build ps3dev image (Ubuntu-based)
         uses: docker/build-push-action@v6
         with:
-          context: https://github.com/wargio/ps3sdk-docker.git#base
-          tags: ps3sdk:base
+          context: https://github.com/ps3dev/ps3dev-docker.git
+          tags: ps3dev:local
           load: true
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new
 
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
-
-      - name: Build plugin with the SDK image
+      - name: Build plugin inside the image
         run: |
           mkdir -p build-out
-          docker run --rm \
-            -v "$PWD:/src" \
-            -w /src \
-            ps3sdk:base \
-            bash -lc 'make -j1 && cp -r ./build/* /src/build-out || cp -r ./*.sprx /src/build-out || true'
+          docker run --rm -v "$PWD:/src" -w /src ps3dev:local \
+            bash -lc 'make -j1 && (cp -r build/* /src/build-out 2>/dev/null || true) && (cp -r *.sprx /src/build-out 2>/dev/null || true)'
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
