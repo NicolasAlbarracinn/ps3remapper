@@ -77,6 +77,24 @@ echo 'export PATH=$PATH:/usr/local/ps3dev/bin:/usr/local/ps3dev/ppu/bin:/usr/loc
 source ~/.bashrc
 ```
 
+### Alternative Environment Setup (Recommended)
+```bash
+# Pick the standard path
+export PS3DEV=/usr/local/ps3dev
+export PSL1GHT=$PS3DEV/psl1ght
+export PATH=$PATH:$PS3DEV/bin:$PSL1GHT/bin
+
+# Create and own them (avoid sudo installs into root-owned dirs)
+sudo mkdir -p "$PS3DEV" "$PSL1GHT"
+sudo chown -R "$USER":"$USER" "$PS3DEV"
+
+# Make permanent (add to ~/.bashrc)
+echo 'export PS3DEV=/usr/local/ps3dev' >> ~/.bashrc
+echo 'export PSL1GHT=$PS3DEV/psl1ght' >> ~/.bashrc
+echo 'export PATH=$PATH:$PS3DEV/bin:$PSL1GHT/bin' >> ~/.bashrc
+source ~/.bashrc
+```
+
 ## Step 4: Install PS3 Toolchain
 
 ### Clone the Toolchain Repository
@@ -114,6 +132,36 @@ spu-gcc --version
 echo "PS3DEV: $PS3DEV"
 echo "PSL1GHT: $PSL1GHT"
 ```
+
+## Step 6: Build Your PS3 Plugin
+
+Once the toolchain is installed, you can build your PS3 plugin:
+
+```bash
+# Go to your plugin source directory
+cd ~/pluginps3
+
+# Clean any previous builds
+make clean
+
+# Build the plugin (single-threaded for compatibility)
+make -j1
+
+# Or build with parallel compilation (faster)
+export MAKE="make -j$(nproc --all)"
+make
+```
+
+### Build Targets
+- `make` - Build release version
+- `make clean` - Clean build artifacts
+- `make -j1` - Single-threaded build (recommended for first build)
+- `make -j$(nproc --all)` - Parallel build using all CPU cores
+
+### Build Artifacts
+After successful compilation, you'll get:
+- `guitar_remap.sprx` - The main plugin file
+- Other build artifacts in the project directory
 
 ## Alternative: Using Git Bash (if WSL fails)
 
